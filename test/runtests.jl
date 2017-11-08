@@ -25,4 +25,23 @@ using GLM
         @test isapprox(predict(tmd), fitted(md))
         @test isapprox(residuals(tmd), residuals(md))
     end
+
+    @testset "ANOVA" begin
+        expect = r2(tmd)
+        actual = Reg.coef_of_determination(md)
+        @test isapprox(expect, actual)
+        @test isapprox(expect, r2(md))
+    end
+
+    @testset "Estimator" begin
+        actual = stderr(md)
+        expect = stderr(tmd)
+        @test expect ≈ actual
+    end
+
+    @testset "Confidence interval" begin
+        expect = confint(tmd)
+        actual = confint(md)
+        @test expect ≈ actual
+    end
 end

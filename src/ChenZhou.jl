@@ -4,9 +4,10 @@ export Reg
 
 module Reg
 using DataFrames
+using Distributions
 import StatsBase
 
-export LinearModel, coef
+export LinearModel, coef, coef_of_determination
 
 
 struct LinearModel
@@ -58,6 +59,33 @@ end # TODO: unittest
 
 StatsBase.fitted(m::LinearModel) = projection_matrix(m) * m.y
 StatsBase.residuals(m::LinearModel) = residual_maker(m) * m.y
+StatsBase.dof_residual(m::LinearModel) = begin
+    n, K = size(m.X)
+    n - K
+end
+
+total_sum_of_squares(m::LinearModel) = abs2.(m.y - mean(m.y)) |> sum
+error_sum_of_squares(m::LinearModel) = begin
+    e = residuals(m)
+    abs2.(e - mean(e)) |> sum
+end
+coef_of_determination(m::LinearModel) = 1 - error_sum_of_squares(m) / total_sum_of_squares(m)
+StatsBase.r2(m::LinearModel) = coef_of_determination(m)
+
+StatsBase.stderr(m::LinearModel) = begin
+    e = residuals(m)
+    s2 = (e' * e) / dof_residual(m)
+    sqrt.(s2 * inv(m.X' * m.X) |> diag)
+end
+
+StatsBase.confint(m::LinearModel, level::Real=0.95) = begin
+    stderr(m) * quantile(
+        TDist(dof_residual(m)),
+        (1. - level) / 2.
+    ) * [1.  -1.] +
+        hcat(coef(m), coef(m))
+end
+
 
 end # module reg
 
